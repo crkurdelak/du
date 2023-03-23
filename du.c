@@ -51,6 +51,7 @@ int main(int argc, char* argv[]) {
         for (int i = optind; i < argc; i++) {
             // TODO process each file/directory
             printf("%s\n", argv[i]);
+            // :3
         }
     }
 }
