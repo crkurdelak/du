@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <dirent.h>
 #include "du.h"
 
 int main(int argc, char* argv[]) {
@@ -59,10 +60,16 @@ int main(int argc, char* argv[]) {
 }
 
 void process_dir(char *dirname, bool opt_all, bool opt_bytes) {
+    // open the directory
+    DIR* dir_stream = opendir(dirname);
     // for each file in directory
-    // find file system space used by file
-    // if opt_all, print space used by file
-    // if file is a directory, descend into directory and process its files (call process_dir())
+    while () {
+        // get current entry
+        struct dirent* current_entry = readdir(dir_stream);
+        // find file system space used by file
+        // if opt_all, print space used by file
+        // if file is a directory, descend into directory and process its files (call process_dir())
+    }
 
     // if opt_bytes, print total space taken by directory in bytes
     // else print total space taken by directory in units ("blocks") of 1024 bytes
