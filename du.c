@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/stat.h>
 #include "du.h"
 
 int main(int argc, char* argv[]) {
@@ -43,34 +44,61 @@ int main(int argc, char* argv[]) {
     if (optind == argc) {
         // no file/directory names provided,
         // so use current working directory
-        // TODO process current working directory
+        char* working_dirname = NULL;
+        getcwd(working_dirname, 100);
+        // open the directory
+        DIR* dir_stream = opendir(working_dirname);
         // call recursive fn
+        process_dir(dir_stream, opt_all, opt_bytes);
         printf(".\n");
     }
     else {
         // one or more file/directory names were provided,
         // so start where getopt() left off and iterate through them
         for (int i = optind; i < argc; i++) {
-            // TODO process each file/directory
             printf("%s\n", argv[i]);
+            // open the directory
+            DIR* dir_stream = opendir(argv[i]);
             // call recursive fn
-            // :3
+            process_dir(dir_stream, opt_all, opt_bytes);
         }
     }
 }
 
-void process_dir(char *dirname, bool opt_all, bool opt_bytes) {
-    // open the directory
-    DIR* dir_stream = opendir(dirname);
-    // for each file in directory
-    while () {
-        // get current entry
-        struct dirent* current_entry = readdir(dir_stream);
-        // find file system space used by file
-        // if opt_all, print space used by file
+void process_dir(DIR *dir_stream, bool opt_all, bool opt_bytes) {
+    unsigned long dir_space = 0;
+    unsigned long file_space = 0;
+    struct stat* stat_buf = NULL;
+    // get first entry in directory
+    struct dirent* current_entry = readdir(dir_stream);
+    while (current_entry) {
         // if file is a directory, descend into directory and process its files (call process_dir())
+        if (current_entry->d_type == DT_DIR) {
+            DIR* next_dir = opendir(current_entry->d_name);
+            process_dir(next_dir, opt_all, opt_bytes);
+        }
+        else {
+            // find file system space used by file
+            stat(current_entry->d_name, stat_buf);
+            file_space = stat_buf->st_size;
+
+            dir_space += file_space;
+
+            // if opt_all, print space used by file
+            if (opt_all) {
+                // print space used by file
+                printf("%lu \n", file_space);
+            }
+        }
+        current_entry = readdir(dir_stream);
     }
 
     // if opt_bytes, print total space taken by directory in bytes
+    if (opt_bytes) {
+        printf("%lu \n", dir_space);
+    }
     // else print total space taken by directory in units ("blocks") of 1024 bytes
+    else {
+        printf("%lu \n", dir_space / 1024);
+    }
 }
