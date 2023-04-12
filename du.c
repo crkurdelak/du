@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <string.h>
 #include "du.h"
 
 int main(int argc, char* argv[]) {
@@ -49,7 +50,7 @@ int main(int argc, char* argv[]) {
         // open the directory
         DIR* dir_stream = opendir(working_dirname);
         // call recursive fn
-        process_dir(dir_stream, opt_all, opt_bytes);
+        process_dir(dir_stream, working_dirname, opt_all, opt_bytes);
         printf(".\n");
     }
     else {
@@ -60,12 +61,12 @@ int main(int argc, char* argv[]) {
             // open the directory
             DIR* dir_stream = opendir(argv[i]);
             // call recursive fn
-            process_dir(dir_stream, opt_all, opt_bytes);
+            process_dir(dir_stream, argv[i], opt_all, opt_bytes);
         }
     }
 }
 
-void process_dir(DIR *dir_stream, bool opt_all, bool opt_bytes) {
+void process_dir(DIR *dir_stream, char *path, bool opt_all, bool opt_bytes) {
     unsigned long dir_space = 0;
     unsigned long file_space = 0;
     struct stat* stat_buf = NULL;
@@ -74,12 +75,18 @@ void process_dir(DIR *dir_stream, bool opt_all, bool opt_bytes) {
     while (current_entry) {
         // if file is a directory, descend into directory and process its files (call process_dir())
         if (current_entry->d_type == DT_DIR) {
-            DIR* next_dir = opendir(current_entry->d_name);
-            process_dir(next_dir, opt_all, opt_bytes);
+            if (strcmp(current_entry->d_name, ".") != 0 && strcmp(current_entry->d_name, "..") !=
+            0) {
+                DIR *next_dir = opendir(current_entry->d_name);
+                process_dir(next_dir, path, opt_all, opt_bytes);
+            }
         }
         else {
             // find file system space used by file
-            stat(current_entry->d_name, stat_buf);
+
+            // append directory name to path
+            strcat(path, current_entry->d_name);
+            stat(path, stat_buf); // TODO why is this returning null
             file_space = stat_buf->st_size;
 
             dir_space += file_space;
@@ -87,7 +94,7 @@ void process_dir(DIR *dir_stream, bool opt_all, bool opt_bytes) {
             // if opt_all, print space used by file
             if (opt_all) {
                 // print space used by file
-                printf("%lu \n", file_space);
+                printf("%lu         %s\n", file_space / 1024, path);
             }
         }
         current_entry = readdir(dir_stream);
