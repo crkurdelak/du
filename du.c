@@ -85,7 +85,8 @@ void process_dir(DIR *dir_stream, char *path, bool opt_all, bool opt_bytes) {
             // find file system space used by file
 
             // append directory name to path
-            strcat(path, current_entry->d_name);
+            strcat(path, current_entry->d_name); // why is this cutting off the end of the
+            // original path
             stat(path, stat_buf); // TODO why is this returning null
             file_space = stat_buf->st_size;
 
