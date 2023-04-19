@@ -22,6 +22,7 @@ int main(int argc, char* argv[]) {
     bool opts_valid = true;
     opterr = 0;
     int opt;
+    // TODO check for -s and -c flags
     while ((opt = getopt(argc, argv, "ab")) != -1) {
         switch (opt) {
             case 'a':
@@ -68,6 +69,7 @@ unsigned long process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
     if (dir_stream) {
         // get first entry in directory
         struct dirent *current_entry = readdir(dir_stream);
+        // TODO if -s create thread for each arg
         while (current_entry) {
             // if file is a directory, descend into directory and process its files (call process_dir())
             if (current_entry->d_type == DT_DIR) {
@@ -112,10 +114,13 @@ unsigned long process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
         if (opt_bytes) {
             printf("%lu         %s\n", dir_space, dir_name);
         }
+        // TODO only do this if not -s flag
             // else print total space taken by directory in units ("blocks") of 1024 bytes
         else {
             printf("%lu         %s\n", dir_space / 1024, dir_name);
         }
+        // TODO if -c flag print cumulative of all args' totals
+        // TODO if -s print total for arg
     }
     return dir_space;
 }
