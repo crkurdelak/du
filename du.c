@@ -54,7 +54,6 @@ int main(int argc, char* argv[]) {
         // one or more file/directory names were provided,
         // so start where getopt() left off and iterate through them
         for (int i = optind; i < argc; i++) {
-            printf("%s\n", argv[i]);
             // call recursive fn
             process_dir(argv[i], opt_all, opt_bytes);
         }
@@ -78,7 +77,6 @@ void process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
                     //char* next_dir = *dir_name + "/" + current_entry->d_name;
                     char current_path[100];
                     strcpy(current_path, dir_name);
-                    memset(current_path, 0, 100);
                     strcat(current_path, "/");
                     strcat(current_path, current_entry->d_name);
                     process_dir(current_path, opt_all, opt_bytes);
@@ -88,7 +86,6 @@ void process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
 
                 // build path
                 char current_path[100];
-                memset(current_path, 0, 100);
                 strcpy(current_path, dir_name);
                 strcat(current_path, "/");
                 strcat(current_path, current_entry->d_name);
@@ -99,8 +96,13 @@ void process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
 
                 // if opt_all, print space used by file
                 if (opt_all) {
-                    // print space used by file
-                    printf("%lu         %s\n", file_space / 1024, dir_name);
+                    if (opt_bytes) {
+                        printf("%lu         %s\n", file_space, current_path);
+                    }
+                    else {
+                        // print space used by file
+                        printf("%lu         %s\n", file_space / 1024, current_path);
+                    }
                 }
             }
             current_entry = readdir(dir_stream);
@@ -108,11 +110,11 @@ void process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
 
         // if opt_bytes, print total space taken by directory in bytes
         if (opt_bytes) {
-            printf("%lu \n", dir_space);
+            printf("%lu         %s\n", dir_space, dir_name);
         }
             // else print total space taken by directory in units ("blocks") of 1024 bytes
         else {
-            printf("%lu \n", dir_space / 1024);
+            printf("%lu         %s\n", dir_space / 1024, dir_name);
         }
     }
 }
