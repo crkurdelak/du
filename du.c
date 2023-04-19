@@ -2,7 +2,7 @@
  * @file du.c
  * @brief A minimal clone of the POSIX `du` utility.
  *
- * @author Brian R. Snider (bsnider@georgefox.edu)
+ * @author Ceci Kurdelak (ckurdelak20@georgefox.edu)
  */
 
 #include <libgen.h>
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
     }
 }
 
-void process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
+unsigned long process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
     unsigned long dir_space = 0;
     unsigned long file_space = 0;
     struct stat stat_buf;
@@ -79,7 +79,7 @@ void process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
                     strcpy(current_path, dir_name);
                     strcat(current_path, "/");
                     strcat(current_path, current_entry->d_name);
-                    process_dir(current_path, opt_all, opt_bytes);
+                    dir_space += process_dir(current_path, opt_all, opt_bytes);
                 }
             } else {
                 // find file system space used by file
@@ -117,4 +117,5 @@ void process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
             printf("%lu         %s\n", dir_space / 1024, dir_name);
         }
     }
+    return dir_space;
 }
