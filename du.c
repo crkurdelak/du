@@ -19,17 +19,25 @@ int main(int argc, char* argv[]) {
     // parse command-line arguments
     bool opt_all = false;
     bool opt_bytes = false;
+    bool opt_summ = false;
+    bool opt_cumul = false;
     bool opts_valid = true;
     opterr = 0;
     int opt;
     // TODO check for -s and -c flags
-    while ((opt = getopt(argc, argv, "ab")) != -1) {
+    while ((opt = getopt(argc, argv, "absc")) != -1) {
         switch (opt) {
             case 'a':
                 opt_all = true;
                 break;
             case 'b':
                 opt_bytes = true;
+                break;
+            case 's':
+                opt_summ = true;
+                break;
+            case 'c':
+                opt_cumul = true;
                 break;
             case '?':
                 fprintf(stderr, "%s: invalid option -- '%c'\n", basename(argv[0]), optopt);
@@ -48,7 +56,7 @@ int main(int argc, char* argv[]) {
         // so use current working directory
         char* working_dirname = ".";
         // call recursive fn
-        process_dir(working_dirname, opt_all, opt_bytes);
+        process_dir(working_dirname, opt_all, opt_bytes, opt_summ, opt_cumul);
         printf(".\n");
     }
     else {
@@ -56,12 +64,13 @@ int main(int argc, char* argv[]) {
         // so start where getopt() left off and iterate through them
         for (int i = optind; i < argc; i++) {
             // call recursive fn
-            process_dir(argv[i], opt_all, opt_bytes);
+            process_dir(argv[i], opt_all, opt_bytes, opt_summ, opt_cumul);
         }
     }
 }
 
-unsigned long process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
+unsigned long
+process_dir(char *dir_name, bool opt_all, bool opt_bytes, bool opt_summ, bool opt_cumul) {
     unsigned long dir_space = 0;
     unsigned long file_space = 0;
     struct stat stat_buf;
@@ -69,7 +78,7 @@ unsigned long process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
     if (dir_stream) {
         // get first entry in directory
         struct dirent *current_entry = readdir(dir_stream);
-        // TODO if -s create thread for each arg
+        // TODO if opt_summ create thread for each arg
         while (current_entry) {
             // if file is a directory, descend into directory and process its files (call process_dir())
             if (current_entry->d_type == DT_DIR) {
@@ -81,7 +90,7 @@ unsigned long process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
                     strcpy(current_path, dir_name);
                     strcat(current_path, "/");
                     strcat(current_path, current_entry->d_name);
-                    dir_space += process_dir(current_path, opt_all, opt_bytes);
+                    dir_space += process_dir(current_path, opt_all, opt_bytes, opt_summ, opt_cumul);
                 }
             } else {
                 // find file system space used by file
@@ -114,13 +123,21 @@ unsigned long process_dir(char *dir_name, bool opt_all, bool opt_bytes) {
         if (opt_bytes) {
             printf("%lu         %s\n", dir_space, dir_name);
         }
-        // TODO only do this if not -s flag
+        // TODO only do this if not opt_summ
             // else print total space taken by directory in units ("blocks") of 1024 bytes
         else {
-            printf("%lu         %s\n", dir_space / 1024, dir_name);
+            if (!opt_summ) {
+                printf("%lu         %s\n", dir_space / 1024, dir_name);
+            }
         }
-        // TODO if -c flag print cumulative of all args' totals
-        // TODO if -s print total for arg
+        // TODO if opt_cumu print cumulative of all args' totals
+        if (opt_cumul) {
+
+        }
+        // TODO if opt_summ print total for arg
+        if (opt_summ) {
+
+        }
     }
     return dir_space;
 }
