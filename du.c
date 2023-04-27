@@ -16,6 +16,7 @@
 #include "du.h"
 
 int main(int argc, char* argv[]) {
+    // TODO define struct containing all args for process_dir, for use in threads
     // parse command-line arguments
     bool opt_all = false;
     bool opt_bytes = false;
@@ -24,7 +25,7 @@ int main(int argc, char* argv[]) {
     bool opts_valid = true;
     opterr = 0;
     int opt;
-    // TODO check for -s and -c flags
+    unsigned long cumul_total = 0;
     while ((opt = getopt(argc, argv, "absc")) != -1) {
         switch (opt) {
             case 'a':
@@ -56,7 +57,7 @@ int main(int argc, char* argv[]) {
         // so use current working directory
         char* working_dirname = ".";
         // call recursive fn
-        process_dir(working_dirname, opt_all, opt_bytes, opt_summ, opt_cumul);
+        cumul_total += process_dir(working_dirname, opt_all, opt_bytes, opt_summ, opt_cumul);
         printf(".\n");
     }
     else {
@@ -64,8 +65,18 @@ int main(int argc, char* argv[]) {
         // so start where getopt() left off and iterate through them
         for (int i = optind; i < argc; i++) {
             // call recursive fn
-            process_dir(argv[i], opt_all, opt_bytes, opt_summ, opt_cumul);
+            // TODO if opt_summ create thread for each arg, call process_dir on it, (struct w all
+            //  args, incl cumulative total)
+            cumul_total += process_dir(argv[i], opt_all, opt_bytes, opt_summ, opt_cumul);
+            // TODO if opt_summ print total for arg
+            if (opt_summ) {
+                // TODO check if opt_bytes
+            }
         }
+    }
+    // TODO if opt_cumul print cumul_total
+    if (opt_cumul) {
+
     }
 }
 
@@ -78,7 +89,6 @@ process_dir(char *dir_name, bool opt_all, bool opt_bytes, bool opt_summ, bool op
     if (dir_stream) {
         // get first entry in directory
         struct dirent *current_entry = readdir(dir_stream);
-        // TODO if opt_summ create thread for each arg
         while (current_entry) {
             // if file is a directory, descend into directory and process its files (call process_dir())
             if (current_entry->d_type == DT_DIR) {
@@ -106,7 +116,7 @@ process_dir(char *dir_name, bool opt_all, bool opt_bytes, bool opt_summ, bool op
                 dir_space += file_space;
 
                 // if opt_all, print space used by file
-                if (opt_all) {
+                if (opt_all && !opt_summ) {
                     if (opt_bytes) {
                         printf("%lu         %s\n", file_space, current_path);
                     }
@@ -120,23 +130,15 @@ process_dir(char *dir_name, bool opt_all, bool opt_bytes, bool opt_summ, bool op
         }
 
         // if opt_bytes, print total space taken by directory in bytes
-        if (opt_bytes) {
+        if (opt_bytes && !opt_summ) {
             printf("%lu         %s\n", dir_space, dir_name);
         }
-        // TODO only do this if not opt_summ
-            // else print total space taken by directory in units ("blocks") of 1024 bytes
+        // else print total space taken by directory in units ("blocks") of 1024 bytes
         else {
+            // if it's a summary, don't print space of individual directories
             if (!opt_summ) {
                 printf("%lu         %s\n", dir_space / 1024, dir_name);
             }
-        }
-        // TODO if opt_cumu print cumulative of all args' totals
-        if (opt_cumul) {
-
-        }
-        // TODO if opt_summ print total for arg
-        if (opt_summ) {
-
         }
     }
     return dir_space;
