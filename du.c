@@ -24,7 +24,9 @@ int main(int argc, char* argv[]) {
     bool opts_valid = true;
     opterr = 0;
     int opt;
-    unsigned long cumul_total = 0;
+
+    unsigned long dir_space = 0;
+
     while ((opt = getopt(argc, argv, "absc")) != -1) {
         switch (opt) {
             case 'a':
@@ -49,38 +51,69 @@ int main(int argc, char* argv[]) {
     if (!opts_valid) {
         exit(EXIT_FAILURE);
     }
-
-    // determine if there are any additional arguments remaining
-    if (optind == argc) {
-        // no file/directory names provided,
-        // so use current working directory
-        char* working_dirname = ".";
-        // call recursive fn
-        cumul_total += process_dir(NULL);
-        printf(".\n");
-    }
     else {
-        // one or more file/directory names were provided,
-        // so start where getopt() left off and iterate through them
-        for (int i = optind; i < argc; i++) {
+        // put together struct to call process_dir
+        du_t dir_info;
+        dir_info.cumul_total = 0;           // initialize as 0
+        dir_info.opt_all = opt_all;
+        dir_info.opt_bytes = opt_bytes;
+        dir_info.opt_summ = opt_summ;
+        dir_info.opt_cumul = opt_cumul;
+
+        // determine if there are any additional arguments remaining
+        if (optind == argc) {
+            // no file/directory names provided,
+            // so use current working directory
+            char *working_dirname = ".";
             // call recursive fn
-            // TODO if opt_summ create thread for each arg, call process_dir on it, (struct w all
-            //  args, incl cumulative total)
-            cumul_total += process_dir(NULL);
-            // TODO if opt_summ print total for arg
-            if (opt_summ) {
-                // TODO check if opt_bytes
+            dir_info.dir_name = working_dirname;
+            dir_space = process_dir(&dir_info);
+            printf(".\n");
+        } else {
+            // one or more file/directory names were provided,
+            // so start where getopt() left off and iterate through them
+            for (int i = optind; i < argc; i++) {
+                dir_info.dir_name = argv[i];
+                // call recursive fn
+                if (opt_summ) {
+                    // TODO if opt_summ create thread for each arg, call process_dir on it, (struct w all
+                    //  args, incl cumulative total)
+                }
+                else {
+                    dir_space = process_dir(&dir_info);
+                }
+                if (opt_summ) {
+                    if (opt_bytes) {
+                        printf("%lu         %s\n", dir_space, dir_info.dir_name);
+                    }
+                        // else print total space taken by directory in units ("blocks") of 1024 bytes
+                    else {
+                        printf("%lu         %s\n", dir_space / 1024, dir_info.dir_name);
+                    }
+                }
             }
         }
-    }
-    // TODO if opt_cumul print cumul_total
-    if (opt_cumul) {
-
+        if (opt_cumul) {
+            if (opt_bytes) {
+                printf("%lu\n", dir_info.cumul_total);
+            }
+            else {
+                // print in "blocks"
+                printf("%lu\n", dir_info.cumul_total / 1024);
+            }
+        }
     }
 }
 
 unsigned long
-process_dir(du_t dir_info) {
+process_dir(du_t *dir_info) {
+    // extract information from dir_info
+    char* dir_name = dir_info->dir_name;
+    bool opt_all = dir_info->opt_all;
+    bool opt_bytes = dir_info->opt_bytes;
+    bool opt_summ = dir_info->opt_summ;
+    bool opt_cumul = dir_info->opt_cumul;
+
     unsigned long dir_space = 0;
     unsigned long file_space = 0;
     struct stat stat_buf;
@@ -99,7 +132,17 @@ process_dir(du_t dir_info) {
                     strcpy(current_path, dir_name);
                     strcat(current_path, "/");
                     strcat(current_path, current_entry->d_name);
-                    dir_space += process_dir(NULL);
+
+                    // put together new struct for recursive call
+                    du_t new_dir_info;
+                    new_dir_info.dir_name = current_path;
+                    new_dir_info.cumul_total = dir_info->cumul_total;
+                    new_dir_info.opt_all = opt_all;
+                    new_dir_info.opt_bytes = opt_bytes;
+                    new_dir_info.opt_summ = opt_summ;
+                    new_dir_info.opt_cumul = opt_cumul;
+
+                    dir_space += process_dir(&new_dir_info);
                 }
             } else {
                 // find file system space used by file
@@ -140,5 +183,6 @@ process_dir(du_t dir_info) {
             }
         }
     }
+    dir_info->cumul_total += dir_space;
     return dir_space;
 }

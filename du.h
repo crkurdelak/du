@@ -31,6 +31,6 @@ typedef struct {
  * @return the total space taken by the specified directory in bytes
  */
 unsigned long
-process_dir(du_t dir_info);
+process_dir(du_t *dir_info);
 
 #endif
