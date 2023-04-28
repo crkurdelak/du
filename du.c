@@ -16,7 +16,6 @@
 #include "du.h"
 
 int main(int argc, char* argv[]) {
-    // TODO define struct containing all args for process_dir, for use in threads
     // parse command-line arguments
     bool opt_all = false;
     bool opt_bytes = false;
@@ -57,7 +56,7 @@ int main(int argc, char* argv[]) {
         // so use current working directory
         char* working_dirname = ".";
         // call recursive fn
-        cumul_total += process_dir(working_dirname, opt_all, opt_bytes, opt_summ, opt_cumul);
+        cumul_total += process_dir(NULL);
         printf(".\n");
     }
     else {
@@ -67,7 +66,7 @@ int main(int argc, char* argv[]) {
             // call recursive fn
             // TODO if opt_summ create thread for each arg, call process_dir on it, (struct w all
             //  args, incl cumulative total)
-            cumul_total += process_dir(argv[i], opt_all, opt_bytes, opt_summ, opt_cumul);
+            cumul_total += process_dir(NULL);
             // TODO if opt_summ print total for arg
             if (opt_summ) {
                 // TODO check if opt_bytes
@@ -81,7 +80,7 @@ int main(int argc, char* argv[]) {
 }
 
 unsigned long
-process_dir(char *dir_name, bool opt_all, bool opt_bytes, bool opt_summ, bool opt_cumul) {
+process_dir(du_t dir_info) {
     unsigned long dir_space = 0;
     unsigned long file_space = 0;
     struct stat stat_buf;
@@ -100,7 +99,7 @@ process_dir(char *dir_name, bool opt_all, bool opt_bytes, bool opt_summ, bool op
                     strcpy(current_path, dir_name);
                     strcat(current_path, "/");
                     strcat(current_path, current_entry->d_name);
-                    dir_space += process_dir(current_path, opt_all, opt_bytes, opt_summ, opt_cumul);
+                    dir_space += process_dir(NULL);
                 }
             } else {
                 // find file system space used by file
