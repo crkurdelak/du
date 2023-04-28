@@ -13,6 +13,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <semaphore.h>
+#include <pthread.h>
 #include "du.h"
 
 int main(int argc, char* argv[]) {
@@ -60,6 +62,11 @@ int main(int argc, char* argv[]) {
         dir_info.opt_summ = opt_summ;
         dir_info.opt_cumul = opt_cumul;
 
+        sem_t mutex;                // mutex for critical regions
+        sem_t sem[argc - optind];               // array of semaphores, 1 per professor
+        pthread_t thread[argc - optind];                 // array of threads
+        du_t thread_arg[argc - optind];                  // array of args for the threads
+
         // determine if there are any additional arguments remaining
         if (optind == argc) {
             // no file/directory names provided,
@@ -72,21 +79,41 @@ int main(int argc, char* argv[]) {
         } else {
             // one or more file/directory names were provided,
             // so start where getopt() left off and iterate through them
+
+            if (opt_summ) {
+                // initialize semaphores
+                // initialize mutex to 1
+                sem_init(&mutex, 0, 1);
+                // initialize the semaphores for the threads to 0
+                for (int i = optind; i < argc; i++) {
+                    sem_init(&sem[i], 0, 0);
+                }
+            }
+
             for (int i = optind; i < argc; i++) {
                 dir_info.dir_name = argv[i];
                 // call recursive fn
                 if (opt_summ) {
-                    // TODO if opt_summ create thread for each arg, call process_dir on it, (struct w all
-                    //  args, incl cumulative total)
+                    thread_arg[i] = dir_info;
+
+                    // initialize thread
+                    pthread_create(&thread[i], NULL, process_dir, &thread_arg[i]); // TODO fix this
                 }
                 else {
+                    // no threads
                     dir_space = process_dir(&dir_info);
                 }
-                if (opt_summ) {
+            }
+
+            if (opt_summ) {
+                // join all threads
+                for (int i = optind; i < argc; i++) {
+                    pthread_join(thread[i], NULL);
+
                     if (opt_bytes) {
                         printf("%lu         %s\n", dir_space, dir_info.dir_name);
                     }
-                        // else print total space taken by directory in units ("blocks") of 1024 bytes
+                    // print total space taken by directory in units ("blocks") of 1024 bytes
                     else {
                         printf("%lu         %s\n", dir_space / 1024, dir_info.dir_name);
                     }
@@ -94,12 +121,13 @@ int main(int argc, char* argv[]) {
             }
         }
         if (opt_cumul) {
+            // print cumulative total of all args
             if (opt_bytes) {
-                printf("%lu\n", dir_info.cumul_total);
+                printf("%lu         total\n", dir_info.cumul_total);
             }
             else {
                 // print in "blocks"
-                printf("%lu\n", dir_info.cumul_total / 1024);
+                printf("%lu         total\n", dir_info.cumul_total / 1024);
             }
         }
     }
